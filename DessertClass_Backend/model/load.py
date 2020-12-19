@@ -7,24 +7,34 @@ import tensorflow.keras.models
 from keras.models import model_from_json
 from tensorflow.python.keras.backend import set_session
 from tensorflow.python.framework import ops
-from keras import backend as K
+from tensorflow.python.keras import backend as K
 
 tf.compat.v1.disable_v2_behavior()
 session = tf.compat.v1.Session()
 
 def init():
     # init and clear session tf keras
-    init = tf.compat.v1.global_variables_initializer()
+    # init = tf.compat.v1.global_variables_initializer()
     session = tf.compat.v1.keras.backend.get_session()
-    session.run(init)
+    # session.run(init)
 
-    # set default graph
+    # # set default graph
+    loaded_model = keras.models.load_model('./model_tuned.h5', custom_objects={
+        'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m})
+    # model = load_model_softmax()
+    loaded_model._make_predict_function()
+
     graph = tf.compat.v1.get_default_graph()
+    # # model._make_predict_function()
+    # print('session')
+    # # load model
+    # # model_softmax = test_load_model()
+    # print(session)
 
-    # load model
-    model_softmax = load_model_softmax()
-
-    return model_softmax, graph, session
+    # loaded_model = keras.models.load_model('./model_moblienet_v2.h5', custom_objects={
+    #     'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m})
+    
+    return loaded_model,graph,session
 
 
 def recall_m(y_true, y_pred):
@@ -58,10 +68,18 @@ def load_model_softmax():
 
     #compile and evaluate loaded model
     loaded_model.compile(loss = 'categorical_crossentropy',
-                         optimizer = 'adam', metrics = ['accuracy', f1_m, precision_m, recall_m])
+                         optimizer='adam', metrics=['accuracy', f1_m, precision_m, recall_m])
+    loaded_model._make_predict_function()
+
 
     return loaded_model
 
+def test_load_model():
+    model = keras.models.load_model('./model_softmax_v4.h5', custom_objects={
+                                    'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m})
+
+    print(model.summary)
+    return model
 
 def load_model_mobilenet():
     json_file = open('./model_mobilenet_v2.json', 'r')

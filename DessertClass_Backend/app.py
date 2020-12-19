@@ -11,11 +11,13 @@ import sys
 import os
 import base64
 from model.load import init
+# from test import init as pred
 from tensorflow.python.keras.backend import set_session
 from flask.helpers import url_for
 import io
 import tensorflow as tf
-
+from tensorflow.python.keras import backend as K
+tf.compat.v1.disable_v2_behavior()
 sys.path.append(os.path.abspath("./model"))
 
 app = Flask(__name__)
@@ -24,11 +26,18 @@ app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy   dog'
 app.config['CORS_HEADERS'] = "Content-Type"
 cors = CORS(app, resources={r"/foo": {"origins": "127.0.0.1:8648"}})
 
-global graph, model_mobile, sess, model_soft, class_names
-model_mobile, graph, sess = init()  # เรียกจาก load.py
+K.clear_session()
+global graph, model_mobile, sess, class_names
 
-class_names = ['kanom_bua_loi', 'kanom_chan', 'kanom_dok_jok', 'kanom_kai_tao', 'kanom_krok',
-               'kanom_phoi_tong', 'kanom_salim', 'kanom_sangkhaya_faktong', 'kanom_tong_yib', 'kanom_tong_yod']
+model_mobile,graph,sess = init()  # เรียกจาก load.py
+
+# model_mobile = keras.models.load_model('model_moblienet_v2.h5', custom_objects={
+#     'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m})
+
+graph = tf.compat.v1.get_default_graph()
+
+class_names = ['kanom bua loi', 'kanom chan', 'kanom dok jok', 'kanom kai tao', 'kanom krok',
+               'kanom phoi tong', 'kanom salim', 'kanom sangkhaya faktong', 'kanom tong yib', 'kanom tong yod']
 
 
 @app.route('/', methods=['POST','GET'])
@@ -57,25 +66,37 @@ def api():
 
     img = convertImage(request.get_json())
 
-    print(img.shape)
+    # print(img.shape)
     
-    resized_image_2 = cv2.resize(img, (180, 180), interpolation=cv2.INTER_CUBIC)
-
-
-    rgb_tensor_2 = tf.convert_to_tensor(resized_image_2, dtype=tf.float32)
-
-    #Add dims to rgb_tensor
-    rgb_tensor_2 = tf.expand_dims(rgb_tensor_2, 0)
-
+    resized_image_2 = cv2.resize(img, (160, 160), interpolation=cv2.INTER_CUBIC)
+    # print(rgb_tensor_2.shape)
+    # with graph.as_default():
+    #     model_mobile.compile()
+    #     model_mobile.fit()
 
     with graph.as_default():
+    # #     print("Graph init")
         set_session(sess)
-        pre = model_mobile.predict(rgb_tensor_2,steps=1)
-        prob = model_mobile.predict(rgb_tensor_2,steps=1)
+        rgb_tensor_2 = tf.compat.v1.convert_to_tensor(
+            resized_image_2, dtype=tf.float32)
 
-        response = {'Class': class_names[pre[0]],
-                    'Prob': np.amax(prob)}
-        return response
+        #Add dims to rgb_tensor
+        rgb_tensor_2 = tf.compat.v1.expand_dims(rgb_tensor_2, 0)
+        
+        model_mobile._make_predict_function()
+        pre = model_mobile.predict(rgb_tensor_2,steps=1)
+        
+        name, val = tellclass(pre)
+
+        response = {'class': name,
+                    'value': str(val)[:4]}
+        # response = {'Class': class_names[pre]}
+        # K.clear_session()
+        return jsonify(response)
+
+
+def tellclass(arr):
+    return class_names[np.argmax(arr)],np.max(arr)
 
 
 def convertImage(imgData1):

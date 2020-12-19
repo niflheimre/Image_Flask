@@ -2,7 +2,10 @@
 
 function readURL(input) {
   
-    var reader = new FileReader();
+	document.getElementById("name").innerHTML = "";
+  	document.getElementById("value").innerHTML = "";
+
+	var reader = new FileReader();
 
 	var $SCRIPT_ROOT = "http://127.0.0.1:8648/predict";
 
@@ -10,6 +13,7 @@ function readURL(input) {
 
 	reader.onload = function (e) {
 		$("#imageResult").attr("src", e.target.result);
+		$("#ImageResult").attr("alt","")
 	};
 	reader.onerror = function (e) {
 		console.log('Error', e);
@@ -25,8 +29,12 @@ function readURL(input) {
 			data: JSON.stringify(result),
 
 			success: function (data) {
-				var response = data.response;
-				console.log(response);
+				// var response = data.response;
+				// var body = JSON.parse(data.data);
+				
+				document.getElementById("name").innerHTML ='Class : ' +data.class;
+				document.getElementById("value").innerHTML = ' Accuracy : '+data.value;
+				console.log(data);
 			},
 			error: function (_req, err) {
 				console.log(err);
